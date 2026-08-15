@@ -1,6 +1,6 @@
 use crate::rules::{Rule, RuleParsingError, Symbol, SymbolId, SymbolType};
 
-use std::{collections::HashMap, println};
+use std::collections::HashMap;
 
 struct SymbolSpec {
     symbols: HashMap<SymbolId, Symbol>,
@@ -78,44 +78,90 @@ pub enum GrammarParsingError {
 }
 
 impl Grammar {
-    fn add_rule(&mut self, source: &str) -> Result<(), RuleParsingError> {
-        let mut left_symbols = Vec::new();
-        let mut right_symbols = Vec::new();
+    fn parse_left_rule<'a, I>(&self, tokens: &mut I) -> Result<Vec<SymbolId>, RuleParsingError> 
+    where 
+        I: Iterator<Item = &'a str> 
+    {
+        let mut symbols = Vec::new();
 
-        let mut curr_symbols = &mut left_symbols;
-
-        let tokens = source.split_whitespace();
-
-        let mut arrow_counter = 0;
-
-        for token in tokens {
-            if token == "->" {
-                if left_symbols.is_empty() {
-                    return Err(RuleParsingError::EmptyLeftSide);
-                }
-
-                if arrow_counter == 1 {
-                    return Err(RuleParsingError::MultipleArrowMapping);
-                }
-
-                curr_symbols = &mut right_symbols;
-                arrow_counter += 1;
+        while let Some(token) = tokens.next() && token != "->" {
+            if token == "|" {
+                return Err(RuleParsingError::InvalidUseOfAlternationOperator);
             } else {
                 match self.symbol_spec.get_symbol_id(token) {
-                    Some(id) => curr_symbols.push(id),
+                    Some(id) => symbols.push(id),
                     None => return Err(RuleParsingError::UnknownSymbol(token.to_string()))
                 }
             }
         }
 
-        if right_symbols.is_empty() {
-            return Err(RuleParsingError::EmptyRightSide);
+        if symbols.is_empty() {
+            return Err(RuleParsingError::EmptyLeftSide);
         }
 
-        self.rules.push(Rule {left: left_symbols, right: right_symbols});
+        Ok(symbols)
+    }
+
+     fn parse_right_subrule<'a, I>(&self, tokens: &mut I) -> Result<Vec<SymbolId>, RuleParsingError>
+    where
+        I: Iterator<Item = &'a str>
+    {
+        let mut symbols = Vec::new();
+
+        let mut token = match tokens.next() {
+            Some("|") => return Err(RuleParsingError::InvalidUseOfAlternationOperator),
+            None => return Ok(symbols),
+            Some(source) => source
+        };
+
+        loop {
+            if token == "->" {
+                return Err(RuleParsingError::MultipleArrowMapping);
+            }
+
+            match self.symbol_spec.get_symbol_id(token) {
+                Some(id) => symbols.push(id),
+                None => return Err(RuleParsingError::UnknownSymbol(token.to_string()))
+            }
+
+            match tokens.next() {
+                Some("|") | None => return Ok(symbols),
+                Some(source) => {
+                    token = source;
+                },
+            }
+        }
+    }
+
+    fn parse_right_rule<'a, I>(&self, tokens: &mut I) -> Result<Vec<Vec<SymbolId>>, RuleParsingError>
+    where
+        I: Iterator<Item = &'a str>
+    {
+        let mut right_side = Vec::new();
+
+        while let symbols = self.parse_right_subrule(tokens)? && !symbols.is_empty() {
+            right_side.push(symbols);
+        }
+
+        Ok(right_side)
+    }
+
+    fn add_rule(&mut self, source: &str) -> Result<(), RuleParsingError> {
+        let mut tokens = source.split_whitespace();
+        let left_symbols = self.parse_left_rule(&mut tokens)?;
+        let right_side = self.parse_right_rule(&mut tokens)?;
+
+        if right_side.is_empty() {
+            return Err(RuleParsingError::EmptyRightSide);
+        }
+        
+        for right_symbols in right_side {
+            self.rules.push(Rule {left: left_symbols.clone(), right: right_symbols});
+        }
 
         Ok(())
     }
+
 
     pub fn add_rules(&mut self, source: &str) -> Result<(), GrammarParsingError> {
         let tokens = source.split(",").map(|s| s.trim());

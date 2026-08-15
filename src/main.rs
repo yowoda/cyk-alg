@@ -7,7 +7,7 @@ use grammar::Grammar;
 
 use crate::{
     grammar::GrammarParsingError::{DuplicateSymbolDeclared, RuleError, UnknownStartSymbol}, 
-    rules::RuleParsingError::{EmptyLeftSide, EmptyRightSide, MultipleArrowMapping, UnknownSymbol}
+    rules::RuleParsingError::{EmptyLeftSide, EmptyRightSide, InvalidUseOfAlternationOperator, MultipleArrowMapping, UnknownSymbol}
 };
 
 fn main() {
@@ -15,7 +15,7 @@ fn main() {
         "a, b, c, d",
         "S, A",
         "S",
-        "S -> A, A -> e"
+        "S -> a | e | A , A -> b"
     );
     match grammar {
         Ok(_) => (),
@@ -26,7 +26,8 @@ fn main() {
                 EmptyLeftSide => println!("Rule '{}' does not have a left side", rule),
                 EmptyRightSide => println!("Rule '{}' does not have a right side", rule),
                 MultipleArrowMapping => println!("Rule '{}' contains multiple mappings", rule),
-                UnknownSymbol(symbol) => println!("Rule '{}' contains unknown symbol '{}'", rule, symbol)
+                UnknownSymbol(symbol) => println!("Rule '{}' contains unknown symbol '{}'", rule, symbol),
+                InvalidUseOfAlternationOperator => println!("Rule '{}' makes invalid use of alternation operator '|'", rule)
             }
         }
     }

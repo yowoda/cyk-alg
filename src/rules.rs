@@ -38,5 +38,6 @@ pub enum RuleParsingError {
     EmptyLeftSide,
     EmptyRightSide,
     MultipleArrowMapping,
+    InvalidUseOfAlternationOperator,
     UnknownSymbol(String)
 }
