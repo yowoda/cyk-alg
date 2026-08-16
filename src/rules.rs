@@ -12,7 +12,8 @@ pub struct Rule {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SymbolType {
     Terminal,
-    NonTerminal
+    NonTerminal,
+    Empty
 }
 
 #[derive(Clone)]

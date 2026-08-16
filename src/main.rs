@@ -8,15 +8,15 @@ use std::println;
 use grammar::Grammar;
 
 use crate::{
-    grammar::GrammarParsingError::{DuplicateSymbolDeclared, RuleError, UnknownStartSymbol}, grammar_types::{ContextFreeCastingError::{LeftSideExactlyOneNonTerminal}, GrammarCastingError, GrammarType}, rules::RuleParsingError::{EmptyLeftSide, EmptyRightSide, InvalidUseOfAlternationOperator, MultipleArrowMapping, UnknownSymbol}, types::context_free::ContextFreeGrammar
+    grammar::{GrammarParsingError::{RuleError, SymbolError}, SymbolSpecError::{DuplicateSymbolDeclared, StartSymbolMustBeNonTerminal, UnknownStartSymbol}}, grammar_types::{ContextFreeCastingError::LeftSideExactlyOneNonTerminal, GrammarCastingError, GrammarType}, rules::RuleParsingError::{EmptyLeftSide, EmptyRightSide, InvalidUseOfAlternationOperator, MultipleArrowMapping, UnknownSymbol}, types::context_free::ContextFreeGrammar
 };
 
 fn main() {
-    let grammar = parse::<ContextFreeGrammar>(
+    let grammar: Result<ContextFreeGrammar, GrammarCastingError> = parse::<ContextFreeGrammar>(
         "a, b, c, d",
         "S, A",
         "S",
-        "S -> a b c d b c d , A -> b"
+        "S -> _ , A -> b"
     );
     match grammar {
         Ok(_) => (),
@@ -25,8 +25,11 @@ fn main() {
                 LeftSideExactlyOneNonTerminal => println!("Left side of CFG must consist of exactly one Non-terminal")
             },
             GrammarCastingError::GrammarCouldNotBeParsed(grammar_error) => match grammar_error {
-                DuplicateSymbolDeclared => println!("All Terminals and Non-Terminals must have a unique representation"),
-                UnknownStartSymbol => println!("The start symbol is not referencing a declared Non-Terminal"),
+                SymbolError(symbol_error) => match symbol_error {
+                    DuplicateSymbolDeclared(sym) => println!("'Symbol {}' has already been declared", sym),
+                    UnknownStartSymbol(sym) => println!("Start symbol '{}' is not referencing a declared Non-Terminal", sym),
+                    StartSymbolMustBeNonTerminal(sym) => println!("Start symbol '{}' should refer to a Non-Terminal, not a terminal", sym)
+                }
                 RuleError(rule, rule_error) => match rule_error {
                     EmptyLeftSide => println!("Rule '{}' does not have a left side", rule),
                     EmptyRightSide => println!("Rule '{}' does not have a right side", rule),
