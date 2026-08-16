@@ -3,6 +3,7 @@ pub struct SymbolId {
     pub id: usize
 }
 
+#[derive(Clone)]
 pub struct Rule {
     pub left: Vec<SymbolId>,
     pub right: Vec<SymbolId>
@@ -14,6 +15,7 @@ pub enum SymbolType {
     NonTerminal
 }
 
+#[derive(Clone)]
 pub struct Symbol {
     text: String,
     stype: SymbolType
@@ -24,11 +26,11 @@ impl Symbol {
         Symbol {text, stype}
     }
 
-    pub fn get_text(&self) -> &str {
+    pub fn text(&self) -> &str {
         &self.text
     }
 
-    pub fn get_type(&self) -> SymbolType {
+    pub fn stype(&self) -> SymbolType {
         self.stype
     }
 }

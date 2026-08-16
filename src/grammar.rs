@@ -2,7 +2,8 @@ use crate::rules::{Rule, RuleParsingError, Symbol, SymbolId, SymbolType};
 
 use std::collections::HashMap;
 
-struct SymbolSpec {
+#[derive(Clone)]
+pub struct SymbolSpec {
     symbols: HashMap<SymbolId, Symbol>,
     symbol_id_mapping: HashMap<String, SymbolId>,
     next_id: usize,
@@ -14,10 +15,14 @@ impl SymbolSpec {
         self.symbol_id_mapping.get(source).map(|&s| s)
     }
 
+    pub fn get_symbol_by_id(&self, symbol_id: SymbolId) -> Option<&Symbol> {
+        self.symbols.get(&symbol_id)
+    }
+
     pub fn set_start_symbol(&mut self, text: &str) -> Result<(), GrammarParsingError> {
         match self.get_symbol_id(text) {
             Some(id) => {
-                if self.symbols.get(&id).unwrap().get_type() == SymbolType::Terminal {
+                if self.symbols.get(&id).unwrap().stype() == SymbolType::Terminal {
                     return Err(GrammarParsingError::UnknownStartSymbol)
                 }
 
@@ -194,4 +199,15 @@ impl Grammar {
         Ok(grammar)
     }
 
+    pub fn rules(&self) -> &Vec<Rule> {
+        &self.rules
+    }
+
+    pub fn symbol_spec(&self) -> &SymbolSpec {
+        &self.symbol_spec
+    }
+
+    pub fn into_symbol_spec(self) -> SymbolSpec {
+        self.symbol_spec
+    }
 }
