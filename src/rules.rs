@@ -1,9 +1,9 @@
-use crate::types::unrestricted::Rule;
+use crate::types::unrestricted::UnrestrictedRule;
 
 pub trait RuleType: Sized {
-    fn into_general(self) -> Rule;
+    fn into_unrestricted(self) -> UnrestrictedRule;
 
-    fn try_cast(rule: Rule) -> Result<Self, RuleCastingError>;
+    fn try_cast(rule: UnrestrictedRule) -> Result<Self, RuleCastingError>;
 }
 
 #[derive(Debug)]
@@ -24,5 +24,5 @@ pub enum RuleParsingError {
 #[derive(Debug)]
 pub enum RuleError {
     RuleParsingError(String, RuleParsingError),
-    RuleCastingError(Rule, RuleCastingError),
+    RuleCastingError(UnrestrictedRule, RuleCastingError),
 }

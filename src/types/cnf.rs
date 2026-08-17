@@ -1,8 +1,8 @@
 use crate::{
     grammar::GrammarType,
     rules::{RuleCastingError, RuleType},
-    symbols::{SymbolId, SymbolSpec},
-    types::{context_free::ContextFreeRule, unrestricted::Rule},
+    symbols::SymbolId,
+    types::{context_free::ContextFreeRule, unrestricted::UnrestrictedRule},
 };
 
 enum RightCnfRule {
@@ -16,8 +16,8 @@ pub struct CnfRule {
 }
 
 impl RuleType for CnfRule {
-    fn into_general(self) -> Rule {
-        Rule {
+    fn into_unrestricted(self) -> UnrestrictedRule {
+        UnrestrictedRule {
             left: vec![self.left],
             right: match self.right {
                 RightCnfRule::NonTerminals(id1, id2) => vec![id1, id2],
@@ -26,7 +26,7 @@ impl RuleType for CnfRule {
         }
     }
 
-    fn try_cast(rule: Rule) -> Result<Self, RuleCastingError> {
+    fn try_cast(rule: UnrestrictedRule) -> Result<Self, RuleCastingError> {
         let cfg_rule = ContextFreeRule::try_cast(rule)?;
 
         let left = cfg_rule.left;
@@ -61,31 +61,4 @@ impl RuleType for CnfRule {
     }
 }
 
-pub struct CnfGrammar {
-    symbol_spec: SymbolSpec,
-    rules: Vec<CnfRule>,
-}
-
-impl GrammarType for CnfGrammar {
-    type Rule = CnfRule;
-
-    fn new(symbol_spec: SymbolSpec, rules: Vec<Self::Rule>) -> Self {
-        Self { symbol_spec, rules }
-    }
-
-    fn rules_mut(&mut self) -> &mut Vec<Self::Rule> {
-        &mut self.rules
-    }
-
-    fn symbol_spec(&self) -> &SymbolSpec {
-        &self.symbol_spec
-    }
-
-    fn symbol_spec_mut(&mut self) -> &mut SymbolSpec {
-        &mut self.symbol_spec
-    }
-
-    fn into_parts(self) -> (SymbolSpec, Vec<Self::Rule>) {
-        (self.symbol_spec, self.rules)
-    }
-}
+pub type CnfGrammar = GrammarType<CnfRule>;

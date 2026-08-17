@@ -5,7 +5,7 @@ use crate::{
         RuleType,
     },
     symbols::{SymbolId, SymbolSpec, SymbolSpecError, SymbolType},
-    types::unrestricted::{Grammar, Rule},
+    types::unrestricted::{UnrestrictedGrammar, UnrestrictedRule},
 };
 
 #[derive(Debug)]
@@ -16,7 +16,7 @@ pub enum GrammarParsingError {
 
 pub enum GrammarError {
     ParsingError(GrammarParsingError),
-    CastingError(Rule, RuleCastingError),
+    CastingError(UnrestrictedRule, RuleCastingError),
 }
 
 impl From<SymbolSpecError> for GrammarError {
@@ -42,16 +42,27 @@ impl From<RuleError> for GrammarError {
     }
 }
 
-pub trait GrammarType: Sized {
-    type Rule: RuleType;
+pub struct GrammarType<R: RuleType> {
+    symbol_spec: SymbolSpec,
+    rules: Vec<R>,
+}
 
-    fn new(symbol_spec: SymbolSpec, rules: Vec<Self::Rule>) -> Self;
+impl<R: RuleType> GrammarType<R> {
+    fn new(symbol_spec: SymbolSpec, rules: Vec<R>) -> Self {
+        return Self { symbol_spec, rules };
+    }
 
-    fn rules_mut(&mut self) -> &mut Vec<Self::Rule>;
+    fn rules_mut(&mut self) -> &mut Vec<R> {
+        &mut self.rules
+    }
 
-    fn symbol_spec(&self) -> &SymbolSpec;
+    fn symbol_spec(&self) -> &SymbolSpec {
+        &self.symbol_spec
+    }
 
-    fn symbol_spec_mut(&mut self) -> &mut SymbolSpec;
+    fn symbol_spec_mut(&mut self) -> &mut SymbolSpec {
+        &mut self.symbol_spec
+    }
 
     fn parse_left_rule<'a, I>(&self, tokens: &mut I) -> Result<Vec<SymbolId>, RuleParsingError>
     where
@@ -128,7 +139,7 @@ pub trait GrammarType: Sized {
         Ok(right_side)
     }
 
-    fn parse_rule(&self, source: &str) -> Result<Vec<Rule>, RuleParsingError> {
+    fn parse_rule(&self, source: &str) -> Result<Vec<UnrestrictedRule>, RuleParsingError> {
         let mut tokens = source.split_whitespace();
         let left_symbols = self.parse_left_rule(&mut tokens)?;
         let right_side = self.parse_right_rule(&mut tokens)?;
@@ -140,7 +151,7 @@ pub trait GrammarType: Sized {
         let mut rules = Vec::new();
 
         for right_symbols in right_side {
-            rules.push(Rule {
+            rules.push(UnrestrictedRule {
                 left: left_symbols.clone(),
                 right: right_symbols,
             });
@@ -156,8 +167,7 @@ pub trait GrammarType: Sized {
 
         for rule in rules {
             self.rules_mut().push(
-                Self::Rule::try_cast(rule.clone())
-                    .map_err(|err| RuleError::RuleCastingError(rule, err))?,
+                R::try_cast(rule.clone()).map_err(|err| RuleError::RuleCastingError(rule, err))?,
             );
         }
 
@@ -174,7 +184,7 @@ pub trait GrammarType: Sized {
         Ok(())
     }
 
-    fn parse(
+    pub fn parse(
         terminals_source: &str,
         non_terminals_source: &str,
         start_symbol_source: &str,
@@ -195,20 +205,22 @@ pub trait GrammarType: Sized {
         Ok(grammar)
     }
 
-    fn into_parts(self) -> (SymbolSpec, Vec<Self::Rule>);
-
-    fn into_general(self) -> Grammar {
-        let (spec, rules) = self.into_parts();
-        let mut general_rules = Vec::new();
-
-        for rule in rules {
-            general_rules.push(rule.into_general());
-        }
-
-        Grammar::new(spec, general_rules)
+    fn into_parts(self) -> (SymbolSpec, Vec<R>) {
+        (self.symbol_spec, self.rules)
     }
 
-    fn try_cast<G: GrammarType>(grammar: G) -> Result<Self, RuleCastingError> {
+    fn into_general(self) -> UnrestrictedGrammar {
+        let (spec, rules) = self.into_parts();
+        let mut unrestricted_rules = Vec::new();
+
+        for rule in rules {
+            unrestricted_rules.push(rule.into_unrestricted());
+        }
+
+        UnrestrictedGrammar::new(spec, unrestricted_rules)
+    }
+
+    fn try_cast<T: RuleType>(grammar: GrammarType<T>) -> Result<Self, RuleCastingError> {
         let general_grammar = grammar.into_general();
 
         let (spec, rules) = general_grammar.into_parts();
@@ -216,7 +228,7 @@ pub trait GrammarType: Sized {
         let mut cast_rules = Vec::new();
 
         for rule in rules {
-            cast_rules.push(Self::Rule::try_cast(rule)?);
+            cast_rules.push(R::try_cast(rule)?);
         }
 
         Ok(Self::new(spec, cast_rules))

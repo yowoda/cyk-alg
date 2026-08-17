@@ -7,23 +7,24 @@ use std::println;
 
 use crate::{
     grammar::{
-        GrammarError::{self, CastingError, ParsingError},
+        GrammarError::{CastingError, ParsingError},
         GrammarParsingError::{RuleCouldNotBeParsed, SymbolError},
-        GrammarType,
-    }, rules::{
+    },
+    rules::{
         RuleCastingError::{NotContextFree, NotInCNF},
         RuleParsingError::{
             EmptyLeftSide, EmptyRightSide, InvalidUseOfAlternationOperator, MultipleArrowMapping,
             UnknownSymbol,
         },
-    }, symbols::SymbolSpecError::{
+    },
+    symbols::SymbolSpecError::{
         DuplicateSymbolDeclared, StartSymbolMustBeNonTerminal, UnknownStartSymbol,
-    }, types::{cnf::CnfGrammar, context_free::ContextFreeGrammar, unrestricted::Grammar},
+    },
+    types::cnf::CnfGrammar,
 };
 
 fn main() {
-    let grammar =
-        parse::<CnfGrammar>("a, b, c, d", "S, A", "S", "S -> d a , A -> b");
+    let grammar = CnfGrammar::parse("a, b, c, d", "S, A", "S", "S -> A a , A -> b");
 
     match grammar {
         Ok(_) => (),
@@ -63,18 +64,4 @@ fn main() {
             },
         },
     }
-}
-
-fn parse<G: GrammarType>(
-    terminals_source: &str,
-    non_terminals_source: &str,
-    start_symbol_source: &str,
-    rules_source: &str,
-) -> Result<G, GrammarError> {
-    Ok(G::parse(
-        terminals_source,
-        non_terminals_source,
-        start_symbol_source,
-        rules_source,
-    )?)
 }

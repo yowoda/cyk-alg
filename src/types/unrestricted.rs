@@ -1,50 +1,23 @@
 use crate::{
     grammar::GrammarType,
     rules::{RuleCastingError, RuleType},
-    symbols::{SymbolId, SymbolSpec},
+    symbols::SymbolId,
 };
 
 #[derive(Clone, Debug)]
-pub struct Rule {
+pub struct UnrestrictedRule {
     pub left: Vec<SymbolId>,
     pub right: Vec<SymbolId>,
 }
 
-impl RuleType for Rule {
-    fn into_general(self) -> Self {
+impl RuleType for UnrestrictedRule {
+    fn into_unrestricted(self) -> Self {
         self
     }
 
-    fn try_cast(rule: Rule) -> Result<Self, RuleCastingError> {
+    fn try_cast(rule: UnrestrictedRule) -> Result<Self, RuleCastingError> {
         Ok(rule)
     }
 }
 
-pub struct Grammar {
-    symbol_spec: SymbolSpec,
-    rules: Vec<Rule>,
-}
-
-impl GrammarType for Grammar {
-    type Rule = Rule;
-
-    fn new(symbol_spec: SymbolSpec, rules: Vec<Rule>) -> Self {
-        return Grammar { symbol_spec, rules };
-    }
-
-    fn rules_mut(&mut self) -> &mut Vec<Rule> {
-        &mut self.rules
-    }
-
-    fn symbol_spec(&self) -> &SymbolSpec {
-        &self.symbol_spec
-    }
-
-    fn symbol_spec_mut(&mut self) -> &mut SymbolSpec {
-        &mut self.symbol_spec
-    }
-
-    fn into_parts(self) -> (SymbolSpec, Vec<Self::Rule>) {
-        (self.symbol_spec, self.rules)
-    }
-}
+pub type UnrestrictedGrammar = GrammarType<UnrestrictedRule>;
