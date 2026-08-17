@@ -1,39 +1,15 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SymbolId {
-    pub id: usize
+use crate::types::unrestricted::Rule;
+
+pub trait RuleType: Sized {
+    fn into_general(self) -> Rule;
+
+    fn try_cast(rule: Rule) -> Result<Self, RuleCastingError>;
 }
 
-#[derive(Clone)]
-pub struct Rule {
-    pub left: Vec<SymbolId>,
-    pub right: Vec<SymbolId>
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SymbolType {
-    Terminal,
-    NonTerminal,
-    Empty
-}
-
-#[derive(Clone)]
-pub struct Symbol {
-    text: String,
-    stype: SymbolType
-}
-
-impl Symbol {
-    pub fn new(text: String, stype: SymbolType) -> Self {
-        Symbol {text, stype}
-    }
-
-    pub fn text(&self) -> &str {
-        &self.text
-    }
-
-    pub fn stype(&self) -> SymbolType {
-        self.stype
-    }
+#[derive(Debug)]
+pub enum RuleCastingError {
+    NotContextFree,
+    NotInCNF,
 }
 
 #[derive(Debug)]
@@ -42,5 +18,11 @@ pub enum RuleParsingError {
     EmptyRightSide,
     MultipleArrowMapping,
     InvalidUseOfAlternationOperator,
-    UnknownSymbol(String)
+    UnknownSymbol(String),
+}
+
+#[derive(Debug)]
+pub enum RuleError {
+    RuleParsingError(String, RuleParsingError),
+    RuleCastingError(Rule, RuleCastingError),
 }

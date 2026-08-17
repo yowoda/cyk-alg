@@ -1,34 +1,63 @@
-use crate::{grammar::{Grammar, SymbolSpec}, grammar_types::{ContextFreeCastingError, GrammarCastingError, GrammarType}, rules::{SymbolId, SymbolType}};
+use crate::{
+    grammar::GrammarType,
+    rules::{RuleCastingError, RuleType},
+    symbols::{SymbolId, SymbolSpec},
+    types::unrestricted::Rule,
+};
 
-struct ContextFreeRule {
+#[derive(Debug)]
+pub struct ContextFreeRule {
     pub left: SymbolId,
-    pub right: Vec<SymbolId>
+    pub right: Vec<SymbolId>,
+}
+
+impl RuleType for ContextFreeRule {
+    fn into_general(self) -> Rule {
+        Rule {
+            left: vec![self.left],
+            right: self.right,
+        }
+    }
+
+    fn try_cast(rule: Rule) -> Result<Self, RuleCastingError> {
+        let left = rule.left.clone();
+
+        if left.len() != 1 || !matches!(left[0], SymbolId::NonTerminal(_)) {
+            return Err(RuleCastingError::NotContextFree);
+        }
+
+        Ok(ContextFreeRule {
+            left: left[0],
+            right: rule.right.clone(),
+        })
+    }
 }
 
 pub struct ContextFreeGrammar {
     symbol_spec: SymbolSpec,
-    rules: Vec<ContextFreeRule>
+    rules: Vec<ContextFreeRule>,
 }
 
 impl GrammarType for ContextFreeGrammar {
-    fn try_cast(grammar: Grammar) -> Result<Self, GrammarCastingError> {
-        let mut rules = Vec::new();
-        
-        for rule in grammar.rules() {
-            let left = rule.left.clone();
-            
-            if left.len() != 1 || grammar.symbol_spec().get_symbol_by_id(left[0]).unwrap().stype() == SymbolType::Terminal {
-                return Err(GrammarCastingError::NotContextFree(rule.clone(), ContextFreeCastingError::LeftSideExactlyOneNonTerminal));
-            }
+    type Rule = ContextFreeRule;
 
-            rules.push(ContextFreeRule { left: left[0], right: rule.right.clone() });
-        }
+    fn new(symbol_spec: SymbolSpec, rules: Vec<Self::Rule>) -> Self {
+        Self { symbol_spec, rules }
+    }
 
-        let cfg = ContextFreeGrammar {
-            symbol_spec: grammar.into_symbol_spec(),
-            rules: rules
-        };
+    fn rules_mut(&mut self) -> &mut Vec<Self::Rule> {
+        &mut self.rules
+    }
 
-        Ok(cfg)
+    fn symbol_spec(&self) -> &SymbolSpec {
+        &self.symbol_spec
+    }
+
+    fn symbol_spec_mut(&mut self) -> &mut SymbolSpec {
+        &mut self.symbol_spec
+    }
+
+    fn into_parts(self) -> (SymbolSpec, Vec<Self::Rule>) {
+        (self.symbol_spec, self.rules)
     }
 }
