@@ -44,15 +44,7 @@ impl GrammarType for Grammar {
         &mut self.symbol_spec
     }
 
-    fn into_general(self) -> Grammar {
-        self
-    }
-
     fn into_parts(self) -> (SymbolSpec, Vec<Self::Rule>) {
         (self.symbol_spec, self.rules)
-    }
-
-    fn try_cast<G: GrammarType>(grammar: G) -> Result<Self, RuleCastingError> {
-        Ok(grammar.into_general())
     }
 }

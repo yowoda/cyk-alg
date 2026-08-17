@@ -213,12 +213,12 @@ pub trait GrammarType: Sized {
 
         let (spec, rules) = general_grammar.into_parts();
 
-        let mut cfg_rules = Vec::new();
+        let mut cast_rules = Vec::new();
 
         for rule in rules {
-            cfg_rules.push(Self::Rule::try_cast(rule)?);
+            cast_rules.push(Self::Rule::try_cast(rule)?);
         }
 
-        Ok(Self::new(spec, cfg_rules))
+        Ok(Self::new(spec, cast_rules))
     }
 }
